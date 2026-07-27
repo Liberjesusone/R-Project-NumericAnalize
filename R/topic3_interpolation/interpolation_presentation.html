@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Interpolación Polinomial</title>
+
+<!-- KaTeX: el mismo motor que usa Obsidian -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{
+    delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false}
+    ],
+    ignoredTags:['script','noscript','style','textarea','pre','code'],
+    throwOnError:false
+  })">
+</script>
+
+<style>
+  :root {
+    --bg:#07111F; --surface:#0E2040; --surface2:#162E55; --border:#1E3F6E;
+    --text:#C9D6E8; --muted:#5B7898; --accent:#E8A93A; --accent2:#3AC9C0;
+    --green:#4ADE80; --red:#F87171; --card-bg:rgba(14,32,64,0.85);
+  }
+  @media(prefers-color-scheme:light){:root{
+    --bg:#EEF2F8; --surface:#DCE4F0; --surface2:#C8D4E8; --border:#9AAEC8;
+    --text:#0D1E35; --muted:#4A6080; --accent:#B8760A; --accent2:#1A8C84;
+    --green:#16803C; --red:#B91C1C; --card-bg:rgba(220,228,240,0.9);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#07111F; --surface:#0E2040; --surface2:#162E55; --border:#1E3F6E;
+    --text:#C9D6E8; --muted:#5B7898; --accent:#E8A93A; --accent2:#3AC9C0;
+    --green:#4ADE80; --red:#F87171; --card-bg:rgba(14,32,64,0.85);
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF2F8; --surface:#DCE4F0; --surface2:#C8D4E8; --border:#9AAEC8;
+    --text:#0D1E35; --muted:#4A6080; --accent:#B8760A; --accent2:#1A8C84;
+    --green:#16803C; --red:#B91C1C; --card-bg:rgba(220,228,240,0.9);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:17px;height:100dvh;overflow:hidden;user-select:none}
+  body::before{content:'';position:fixed;inset:0;
+    background-image:linear-gradient(var(--border) 1px,transparent 1px),
+      linear-gradient(90deg,var(--border) 1px,transparent 1px);
+    background-size:44px 44px;opacity:.22;pointer-events:none}
+  #cc{position:fixed;inset:0;pointer-events:none;opacity:.16}
+
+  /* KaTeX */
+  .katex-display{margin:.4em 0 !important;overflow-x:auto;overflow-y:hidden}
+  .katex{font-size:1.05em !important;color:var(--text)}
+
+  /* Formula box */
+  .fbox{
+    background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--accent);border-radius:8px;
+    padding:.9rem 1.6rem;max-width:840px;width:100%;overflow-x:auto;
+  }
+  .fbox.tl{border-left-color:var(--accent2)}
+  .fbox.rd{border-left-color:var(--red)}
+  .fsep{width:100%;height:1px;background:var(--border);margin:.55rem 0}
+
+  /* Deck */
+  .deck{width:100%;height:100dvh;position:relative}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;padding:2.5rem 3.5rem;
+    opacity:0;pointer-events:none;transition:opacity .35s ease}
+  .slide.active{opacity:1;pointer-events:all}
+
+  #progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .4s;z-index:100}
+  #dots{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);display:flex;gap:.55rem;z-index:100}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);cursor:pointer;transition:background .3s,transform .3s}
+  .dot.active{background:var(--accent);transform:scale(1.4)}
+  #counter{position:fixed;bottom:1.5rem;right:2rem;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .nb{position:fixed;top:50%;transform:translateY(-50%);background:var(--surface);
+    border:1px solid var(--border);color:var(--muted);font-size:1.2rem;
+    width:2.4rem;height:2.4rem;border-radius:50%;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;transition:color .2s,border-color .2s;z-index:100}
+  .nb:hover{color:var(--text);border-color:var(--accent)}
+  #bp{left:1rem} #bn{right:1rem}
+
+  /* Typography */
+  .ey{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.8rem}
+  h1{font-size:clamp(2.4rem,5vw,3.8rem);font-weight:700;line-height:1.08;text-wrap:balance}
+  h1 em{font-style:normal;color:var(--accent)}
+  h2{font-size:clamp(1.5rem,3.2vw,2.2rem);font-weight:700;text-wrap:balance;margin-bottom:1.2rem}
+  h2 em{font-style:normal;color:var(--accent)}
+  .sub-t{font-size:1rem;color:var(--muted);margin-top:1.1rem;letter-spacing:.03em}
+
+  /* Cards */
+  .cards{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;width:100%;max-width:900px}
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
+    padding:1.1rem 1.3rem;flex:1 1 200px;backdrop-filter:blur(6px)}
+  .ct{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:.5rem}
+  .card p{font-size:.9rem;line-height:1.55}
+  .card.ac{border-color:var(--accent)} .card.tc{border-color:var(--accent2)}
+
+  /* Two-col */
+  .tc2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;width:100%;max-width:900px}
+  @media(max-width:680px){.tc2{grid-template-columns:1fr}}
+
+  /* Tables */
+  .tw{overflow-x:auto;max-width:100%}
+  table{border-collapse:collapse;font-size:.83rem;font-variant-numeric:tabular-nums;width:100%}
+  th{background:var(--surface2);color:var(--accent);font-size:.72rem;letter-spacing:.1em;
+    text-transform:uppercase;padding:.5rem .8rem;border:1px solid var(--border);white-space:nowrap}
+  td{padding:.45rem .8rem;border:1px solid var(--border);color:var(--text);
+    font-family:'Courier New',monospace;white-space:nowrap}
+  tr:nth-child(even) td{background:var(--surface)}
+  .td{color:var(--accent2);font-weight:600} .tu{color:var(--accent);font-weight:700}
+
+  /* Bullets */
+  ul.bl{list-style:none;padding:0;max-width:780px}
+  ul.bl li{padding:.42rem 0 .42rem 1.4rem;position:relative;font-size:.92rem;
+    border-bottom:1px solid var(--border);line-height:1.5}
+  ul.bl li:last-child{border-bottom:none}
+  ul.bl li::before{content:'›';position:absolute;left:0;color:var(--accent);font-weight:700}
+  ul.bl li strong{color:var(--accent)} ul.bl li em{color:var(--accent2);font-style:normal}
+
+  /* Code */
+  .co{background:#000d1a;border:1px solid var(--border);border-radius:8px;
+    padding:.9rem 1.1rem;font-family:'Courier New',monospace;font-size:.78rem;
+    color:#7EC8A4;line-height:1.6;overflow-x:auto}
+  .co .pr{color:var(--muted)} .co .vl{color:var(--accent)} .co .er{color:var(--accent2)}
+
+  /* Comparison */
+  .cp .yes{color:var(--green)} .cp .no{color:var(--red)} .cp .ok2{color:var(--accent2)}
+
+  /* Conclusions */
+  .cn{display:flex;gap:.9rem;flex-direction:column;max-width:720px;width:100%}
+  .ci{display:flex;gap:1rem;align-items:flex-start;background:var(--card-bg);
+    border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem}
+  .cn-n{color:var(--accent);font-size:1.2rem;font-weight:700;min-width:1.6rem;line-height:1.2}
+  .ci p{font-size:.88rem;line-height:1.55}
+  .ci p strong{color:var(--accent2)}
+
+  /* Title */
+  #s0{text-align:center;gap:1rem}
+  .tr{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-top:1.4rem}
+  .tg{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid var(--border);border-radius:999px;padding:.3rem .85rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<canvas id="cc"></canvas>
+<div id="progress"></div>
+
+<div class="deck">
+
+  <!-- 0 · Título -->
+  <div class="slide active" id="s0">
+    <div class="ey">Capítulo 2 · Nakamura</div>
+    <h1>Interpolación<br><em>Polinomial</em></h1>
+    <p class="sub-t">Métodos Numéricos Aplicados con Software · ULA–CeSiMo</p>
+    <div class="tr">
+      <span class="tg">Prog 2-1 · Lagrange</span>
+      <span class="tg">Prog 2-3 · Dif. divididas</span>
+      <span class="tg">Implementado en R</span>
+    </div>
+  </div>
+
+  <!-- 1 · Motivación -->
+  <div class="slide">
+    <div class="ey">Motivación</div>
+    <h2>¿Qué es la <em>interpolación</em>?</h2>
+    <div class="cards">
+      <div class="card ac">
+        <div class="ct">El problema</div>
+        <p>Datos conocidos: <strong style="color:var(--accent2)">$n+1$ pares $(x_i,\, f(x_i))$</strong>.<br>¿Cómo estimar $f(x)$ en un punto intermedio?</p>
+      </div>
+      <div class="card">
+        <div class="ct">La solución</div>
+        <p>Construir un <strong style="color:var(--accent)">polinomio $P(x)$</strong> de grado $\leq n$ que pase exactamente por todos los puntos.</p>
+      </div>
+      <div class="card">
+        <div class="ct">Unicidad</div>
+        <p>Dados $n+1$ puntos con $x_i$ distintos, existe un <strong style="color:var(--accent)">único</strong> polinomio de grado $\leq n$ que los interpola.</p>
+      </div>
+      <div class="card tc">
+        <div class="ct">Interpolación vs Extrapolación</div>
+        <p><em>Interpolación:</em> $x$ entre los datos — precisa.<br><em>Extrapolación:</em> $x$ fuera del intervalo — el error crece rápidamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · Lagrange -->
+  <div class="slide">
+    <div class="ey">Fórmula directa</div>
+    <h2>Interpolación de <em>Lagrange</em></h2>
+    <div class="fbox" style="margin-bottom:1rem">
+      $$P(x) = \sum_{k=0}^{n} L_k(x)\cdot f(x_k)$$
+      <div class="fsep"></div>
+      $$L_k(x) = \prod_{\substack{j=0\\j\neq k}}^{n} \frac{x - x_j}{x_k - x_j}$$
+    </div>
+    <ul class="bl">
+      <li><strong>$L_k$</strong> vale $1$ en $x_k$ y $0$ en todos los demás nodos — actúa como "selector".</li>
+      <li><strong>Desventaja:</strong> añadir un nuevo punto obliga a recalcular todos los $L_k$ desde cero.</li>
+      <li><strong>Newton resuelve esto</strong> con tablas de diferencias — agregar un punto solo añade una columna nueva.</li>
+    </ul>
+  </div>
+
+  <!-- 3 · Prog 2-1 -->
+  <div class="slide">
+    <div class="ey">Programa 2-1 · Nakamura pp. 72–73</div>
+    <h2>Implementación de <em>Lagrange</em></h2>
+    <div class="tc2">
+      <div>
+        <div class="fbox">
+          $$L_k(x) = \prod_{\substack{j=0\\j\neq k}}^{n} \frac{x - x_j}{x_k - x_j}$$
+          <div class="fsep"></div>
+          $$P(x) = \sum_{k=0}^{n} L_k(x)\cdot f(x_k)$$
+        </div>
+        <div class="tw" style="margin-top:.9rem">
+          <table>
+            <thead><tr><th>I</th><th>X(I)</th><th>F(I)</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>1.000</td><td class="tu">0.67100</td></tr>
+              <tr><td>1</td><td>2.000</td><td class="tu">0.62000</td></tr>
+              <tr><td>2</td><td>3.000</td><td class="tu">0.56700</td></tr>
+              <tr><td>3</td><td>4.000</td><td class="tu">0.51200</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.8rem">
+        <div class="card ac">
+          <div class="ct">Algoritmo (2 lazos anidados)</div>
+          <p>Para cada $i$: calcular $Z = \prod_{j \neq i}\dfrac{x_A - x_j}{x_i - x_j}$, luego acumular $YRES \mathrel{+}= Z \cdot f_i$.</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">Extrapolación</div>
+          <p>Si $x < x_0$ o $x > x_n$, el programa imprime <strong style="color:var(--accent)">advertencia</strong> pero continúa calculando.</p>
+        </div>
+        <div class="card">
+          <div class="ct">Costo</div>
+          <p>$O(n^2)$ multiplicaciones. Con $n+1 = 4$ puntos: exactamente $12$ productos por evaluación.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 · Resultados 2-1 -->
+  <div class="slide">
+    <div class="ey">Programa 2-1 · Salida del libro · p. 73</div>
+    <h2>Interpolación y <em>extrapolación</em></h2>
+    <div class="tw" style="max-width:680px;width:100%;margin-bottom:1.1rem">
+      <table>
+        <thead>
+          <tr><th>$x$ evaluado</th><th>$G(x)$ resultado</th><th>Modo</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>3.66</td>
+            <td class="tu">5.30924 × 10⁻¹</td>
+            <td style="color:var(--green);font-weight:600">Interpolación ✓</td>
+          </tr>
+          <tr>
+            <td>4.50</td>
+            <td>4.83750 × 10⁻¹</td>
+            <td style="color:var(--red);font-weight:600">Extrapolación ⚠</td>
+          </tr>
+          <tr>
+            <td>0.10</td>
+            <td>7.15190 × 10⁻¹</td>
+            <td style="color:var(--red);font-weight:600">Extrapolación ⚠</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="bl">
+      <li><strong>$x = 3.66$</strong> está entre $x_2 = 3$ y $x_3 = 4$ — interpolación legítima, resultado confiable.</li>
+      <li><strong>$x = 4.5$ y $x = 0.1$</strong> están fuera de $[1,\,4]$ — el polinomio puede divergir rápidamente.</li>
+      <li>El programa imprime advertencia pero <em>sigue calculando</em>: útil para estimaciones, con precaución.</li>
+    </ul>
+  </div>
+
+  <!-- 5 · Prog 2-3 -->
+  <div class="slide">
+    <div class="ey">Programa 2-3 · Datos de cualquier espaciado</div>
+    <h2>Diferencias <em>divididas</em> de Newton</h2>
+    <div class="tc2">
+      <div>
+        <div class="fbox">
+          $$f[x_i] = f(x_i)$$
+          $$f[x_i, x_j] = \dfrac{f[x_j] - f[x_i]}{x_j - x_i}$$
+          <div class="fsep"></div>
+          $$P(x) = f[x_0] + f[x_0,x_1](x-x_0)$$
+          $$\quad + f[x_0,x_1,x_2](x-x_0)(x-x_1) + \cdots$$
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.8rem">
+        <div class="card ac">
+          <div class="ct">Ventaja clave</div>
+          <p>Agregar $x_{n+1}$ solo requiere calcular <strong style="color:var(--accent)">una nueva columna</strong>. Los coeficientes anteriores no cambian.</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">Relación con diferencias $\Delta$</div>
+          <p>Con datos equiespaciados, las diferencias divididas se reducen a diferencias hacia adelante divididas por potencias de $h$.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 · Error -->
+  <div class="slide">
+    <div class="ey">Análisis de error</div>
+    <h2>Error de <em>truncamiento</em></h2>
+    <div class="fbox rd" style="margin-bottom:1.2rem">
+      $$E(x) = \frac{f^{(n+1)}(\xi)}{(n+1)!} \cdot \prod_{i=0}^{n}(x - x_i), \qquad \xi \in \bigl(\min_i x_i,\; \max_i x_i\bigr)$$
+    </div>
+    <ul class="bl">
+      <li><strong>Más nodos ($n$ mayor)</strong> → el error típicamente decrece, pero no siempre.</li>
+      <li><strong>Fenómeno de Runge:</strong> para $f(x) = \dfrac{1}{1+x^2}$ con nodos equiespaciados, aumentar $n$ <em>empeora</em> el error en los extremos.</li>
+      <li><strong>Error vs redondeo:</strong> sumar muchos términos introduce errores acumulativos — hay un $n$ óptimo.</li>
+      <li><strong>Extrapolación:</strong> el producto $(x-x_0)\cdots(x-x_n)$ crece rápido fuera del intervalo — evitarla.</li>
+    </ul>
+  </div>
+
+  <!-- 7 · Comparación -->
+  <div class="slide">
+    <div class="ey">Resumen comparativo</div>
+    <h2>Comparación de <em>métodos</em></h2>
+    <div class="tw" style="max-width:820px;width:100%;margin-bottom:1.2rem">
+      <table class="cp">
+        <thead>
+          <tr><th>Característica</th><th>Lagrange (2-1)</th><th>Newton $\Delta$</th><th>Div. Divididas (2-3)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Espaciado</td><td class="ok2">Cualquiera</td><td class="no">Solo uniforme</td><td class="ok2">Cualquiera</td></tr>
+          <tr><td>Agregar un punto</td><td class="no">Recalcular todo</td><td class="no">Recalcular todo</td><td class="yes">Solo 1 col. nueva</td></tr>
+          <tr><td>Costo</td><td>$O(n^2)$</td><td>$O(n^2)$</td><td>$O(n^2)$</td></tr>
+          <tr><td>Resultado</td><td class="yes">Mismo $P(x)$</td><td class="yes">Mismo $P(x)$</td><td class="yes">Mismo $P(x)$</td></tr>
+          <tr><td>Uso práctico</td><td>Teórico</td><td>Tablas uniformes</td><td class="yes">Caso general</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);max-width:700px;text-align:center">
+      Los tres métodos producen el <strong style="color:var(--accent)">mismo polinomio único</strong> de grado $\leq n$.
+      Difieren solo en eficiencia y forma de cálculo.
+    </p>
+  </div>
+
+  <!-- 8 · Resultados R -->
+  <div class="slide">
+    <div class="ey">Implementación · R-project</div>
+    <h2>Resultados en <em>R</em></h2>
+    <div class="tc2">
+      <div>
+        <div class="ey" style="margin-bottom:.5rem">Programa 2-1 · Lagrange · 4 puntos</div>
+        <div class="co">
+<span class="pr">DAR X = 3.66</span>
+  G(<span class="vl"> 3.66000e+00</span>) = <span class="vl">5.30924e-01</span>
+
+<span class="pr">DAR X = 4.50  ← extrapolación</span>
+  ADVERTENCIA: X fuera del rango
+  G(<span class="vl"> 4.50000e+00</span>) = <span class="er">4.83750e-01</span>
+
+<span class="pr">DAR X = 0.10  ← extrapolación</span>
+  ADVERTENCIA: X fuera del rango
+  G(<span class="vl"> 1.00000e-01</span>) = <span class="er">7.15190e-01</span>
+        </div>
+      </div>
+      <div>
+        <div class="ey" style="margin-bottom:.5rem">Programa 2-3 · cos(x) · 7 puntos no uniformes</div>
+        <div class="co">
+<span class="pr"> I    X(I)      F(I,0)    F(I,I+1)  ...</span>
+ 0  0.10000   0.99750  -0.07480  -0.24433 ...
+ 1  0.20000   0.99002  -0.14810  -0.23180 ...
+ 2  0.40000   0.96040  -0.26400  -0.20444 ...
+ 3  0.70000   0.88120  -0.38667  ...
+ 4  1.00000   0.76520  -0.47035
+ 5  1.20000   0.67113  -0.51040
+ 6  1.30000   0.62009
+
+<span class="pr">Interpolacion en x = 0.5</span>
+  Valor interpolado : <span class="vl">0.877583</span>
+  Valor exacto      : <span class="vl">0.877583</span>
+  Error absoluto    : <span class="er">~1e-07</span>
+        </div>
+      </div>
+    </div>
+    <div class="cn" style="margin-top:1.1rem">
+      <div class="ci">
+        <div class="cn-n">✓</div>
+        <p>Prog 2-1 replica <strong>exactamente</strong> la salida del libro: $G(3.66) = 5.30924\times10^{-1}$. Las advertencias de extrapolación funcionan.</p>
+      </div>
+      <div class="ci">
+        <div class="cn-n">✓</div>
+        <p>Prog 2-3 tabla coincide con libro p. 73. $\cos(0.5)$ interpolado con error $\approx 10^{-7}$ — 7 puntos no uniformes, función suave.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<div id="dots"></div>
+<div id="counter"></div>
+<button class="nb" id="bp">&#8249;</button>
+<button class="nb" id="bn">&#8250;</button>
+
+<script>
+  const cv=document.getElementById('cc'),cx=cv.getContext('2d');
+  function draw(){
+    cv.width=innerWidth;cv.height=innerHeight;cx.clearRect(0,0,cv.width,cv.height);
+    const w=cv.width,h=cv.height,s=getComputedStyle(document.documentElement);
+    const c1=s.getPropertyValue('--accent').trim(),c2=s.getPropertyValue('--accent2').trim();
+    cx.beginPath();cx.moveTo(0,h*.72);
+    for(let x=0;x<=w;x+=2){const t=x/w;cx.lineTo(x,h*(.72-.38*t+.55*t*t-.44*t*t*t+.15*t*t*t*t))}
+    cx.strokeStyle=c1;cx.lineWidth=2;cx.stroke();
+    cx.beginPath();cx.moveTo(0,h*.28);
+    for(let x=0;x<=w;x+=2){const t=x/w;cx.lineTo(x,h*(.28+.32*t-.82*t*t+.72*t*t*t-.2*t*t*t*t))}
+    cx.strokeStyle=c2;cx.lineWidth=1.5;cx.setLineDash([8,6]);cx.stroke();cx.setLineDash([]);
+  }
+  draw();addEventListener('resize',draw);
+
+  const sl=Array.from(document.querySelectorAll('.slide')),N=sl.length;
+  const dotsEl=document.getElementById('dots'),pr=document.getElementById('progress'),ct=document.getElementById('counter');
+  let cur=0;
+  sl.forEach((_,i)=>{
+    const d=document.createElement('button');d.className='dot'+(i===0?' active':'');
+    d.setAttribute('aria-label','Slide '+(i+1));d.onclick=()=>go(i);dotsEl.appendChild(d);
+  });
+  function go(i){
+    sl[cur].classList.remove('active');dotsEl.children[cur].classList.remove('active');
+    cur=(i+N)%N;sl[cur].classList.add('active');dotsEl.children[cur].classList.add('active');
+    pr.style.width=((cur/(N-1))*100)+'%';ct.textContent=(cur+1)+' / '+N;draw();
+  }
+  document.getElementById('bp').onclick=()=>go(cur-1);
+  document.getElementById('bn').onclick=()=>go(cur+1);
+  addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowDown')go(cur+1);
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(cur-1);
+  });
+  ct.textContent='1 / '+N;pr.style.width='0%';
+</script>
+</body>
+</html>

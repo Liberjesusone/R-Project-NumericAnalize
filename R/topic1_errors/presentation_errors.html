@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Errores en Métodos Numéricos</title>
+<style>
+  /* ── Token system ── */
+  :root {
+    --bg:        #06101C;
+    --surface:   #0C1C30;
+    --surface2:  #122540;
+    --border:    #1E3A58;
+    --text:      #D4E5F7;
+    --muted:     #5A7F9E;
+    --accent:    #E8693A;
+    --math:      #F5C842;
+    --code-c:    #4DD0AE;
+    --sign-c:    #E8693A;
+    --exp-c:     #8AB4F8;
+    --man-c:     #4DD0AE;
+    --grid-line: rgba(30, 58, 88, 0.5);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .pres {
+    position: relative;
+    width: 100vw; height: 100vh;
+    z-index: 1;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 3.5rem clamp(2rem, 8vw, 6rem);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(36px);
+    transition: opacity 0.38s ease, transform 0.38s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+  .slide.out {
+    opacity: 0;
+    transform: translateX(-36px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1.15;
+    text-wrap: balance;
+    color: var(--text);
+    max-width: 820px;
+  }
+  h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+    font-weight: 600;
+    line-height: 1.2;
+    text-wrap: balance;
+    color: var(--text);
+    margin-bottom: 1.6rem;
+  }
+  .accent-line {
+    display: block;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: clamp(0.95rem, 2vw, 1.2rem);
+    color: var(--muted);
+    margin-top: 1rem;
+    font-style: italic;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+
+  p, li {
+    font-size: clamp(0.92rem, 1.8vw, 1.05rem);
+    line-height: 1.7;
+    color: var(--text);
+    max-width: 760px;
+  }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: 0.4rem; }
+  strong { color: var(--text); font-weight: 600; }
+  em { color: var(--math); font-style: normal; font-weight: 500; }
+
+  .math {
+    font-family: Georgia, serif;
+    font-size: clamp(1rem, 2.2vw, 1.25rem);
+    color: var(--math);
+    background: var(--surface);
+    border-left: 3px solid var(--math);
+    padding: 0.75rem 1.2rem;
+    border-radius: 0 4px 4px 0;
+    margin: 0.6rem 0;
+    display: inline-block;
+  }
+  .math-block { display: block; max-width: 680px; }
+
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--code-c);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.4rem;
+    font-family: 'Consolas', 'Cascadia Code', 'Courier New', monospace;
+    font-size: clamp(0.78rem, 1.5vw, 0.92rem);
+    line-height: 1.6;
+    color: var(--code-c);
+    max-width: 680px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+  }
+  .comment { color: var(--muted); font-style: italic; }
+  .result  { color: var(--math); }
+
+  .cols {
+    display: flex;
+    gap: 1.5rem;
+    max-width: 900px;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    padding: 1rem 1.2rem;
+    border-radius: 0 0 4px 4px;
+    flex: 1 1 220px;
+    min-width: 200px;
+  }
+  .card h3 {
+    font-family: Georgia, serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+  .card p, .card li { font-size: 0.87rem; line-height: 1.55; }
+  .card.blue  { border-top-color: var(--exp-c); }
+  .card.blue h3  { color: var(--exp-c); }
+  .card.green { border-top-color: var(--code-c); }
+  .card.green h3 { color: var(--code-c); }
+  .card.gold  { border-top-color: var(--math); }
+  .card.gold h3  { color: var(--math); }
+
+  .bit-diagram {
+    display: flex;
+    gap: 0;
+    max-width: 820px;
+    margin: 1.2rem 0 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bit-seg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.7rem 0.5rem;
+    gap: 0.4rem;
+  }
+  .bit-seg.s  { background: rgba(232,105,58,0.15); border-right: 1px solid var(--border); flex: 0 0 60px; }
+  .bit-seg.e  { background: rgba(138,180,248,0.1);  border-right: 1px solid var(--border); flex: 0 0 160px; }
+  .bit-seg.m  { background: rgba(77,208,174,0.08); flex: 1; }
+  .bit-label  { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+  .bit-seg.s .bit-label { color: var(--sign-c); }
+  .bit-seg.e .bit-label { color: var(--exp-c); }
+  .bit-seg.m .bit-label { color: var(--code-c); }
+  .bit-count  { font-family: 'Consolas', monospace; font-size: 1.4rem; font-weight: 700; }
+  .bit-seg.s .bit-count { color: var(--sign-c); }
+  .bit-seg.e .bit-count { color: var(--exp-c); }
+  .bit-seg.m .bit-count { color: var(--code-c); }
+  .bit-name   { font-size: 0.75rem; color: var(--muted); text-align: center; line-height: 1.3; }
+
+  table { border-collapse: collapse; max-width: 720px; width: 100%; margin-top: 0.5rem; }
+  th {
+    text-align: left;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding: 0.4rem 0.8rem;
+  }
+  td { padding: 0.55rem 0.8rem; font-size: 0.9rem; border-bottom: 1px solid rgba(30,58,88,0.4); vertical-align: middle; }
+  td:first-child  { color: var(--text); font-weight: 500; }
+  td:nth-child(2) { font-family: Georgia, serif; color: var(--math); font-size: 1rem; }
+  td:nth-child(3) { color: var(--muted); font-size: 0.84rem; }
+
+  .stats { display: flex; gap: 1.2rem; margin-top: 0.8rem; flex-wrap: wrap; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.8rem 1.2rem;
+    border-radius: 4px;
+    min-width: 160px;
+  }
+  .stat-val {
+    font-family: 'Consolas', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--math);
+    line-height: 1;
+  }
+  .stat-label { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; letter-spacing: 0.04em; }
+
+  .concl li { padding: 0.4rem 0; border-bottom: 1px solid rgba(30,58,88,0.35); font-size: clamp(0.9rem, 1.7vw, 1.02rem); }
+  .concl li:last-child { border-bottom: none; }
+  .tag {
+    display: inline-block;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent);
+    padding: 0.1rem 0.4rem; border-radius: 2px;
+    margin-right: 0.5rem; vertical-align: middle; opacity: 0.85;
+  }
+
+  .nav-bar {
+    position: fixed;
+    bottom: 1.6rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 1rem;
+    z-index: 10;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 0.5rem 1rem;
+  }
+  .nav-btn {
+    background: none; border: none; color: var(--text);
+    font-size: 1.1rem; cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--accent); }
+  .nav-btn:focus-visible { outline: 2px solid var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .slide-counter {
+    font-family: 'Consolas', monospace; font-size: 0.8rem;
+    color: var(--muted); min-width: 42px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .progress {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--accent);
+    z-index: 20; transition: width 0.38s ease;
+  }
+
+  .slide-num-corner {
+    position: fixed; top: 1.2rem; right: 1.6rem;
+    font-family: 'Consolas', monospace; font-size: 0.72rem;
+    color: var(--muted); z-index: 10;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: none; }
+    .progress { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="slide-num-corner" id="corner-num">01 / 09</div>
+
+<div class="pres" id="pres">
+
+  <!-- SLIDE 1 -->
+  <div class="slide active" id="s1">
+    <div class="eyebrow">Universidad de Los Andes · CeSiMo · Análisis Numérico · 2026</div>
+    <h1>Errores en<br><span class="accent-line">Métodos Numéricos</span></h1>
+    <p class="subtitle">Representación de punto flotante, precisión de máquina<br>y desbordamiento — con demostración en R</p>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide" id="s2">
+    <div class="eyebrow">Introducción</div>
+    <h2>¿Por qué existen errores?</h2>
+    <p style="margin-bottom:1rem; max-width:680px;">
+      <em>"El eficiente y preciso uso de los resultados numéricos requiere considerable
+      experiencia y avanzados conocimientos para evitar desatinos."</em>
+    </p>
+    <ul style="margin-top:0.5rem;">
+      <li>Las computadoras representan números con <strong>precisión finita</strong> — número fijo de bits</li>
+      <li>Los algoritmos numéricos aproximan procesos <strong>matemáticamente infinitos</strong> (series, límites, integrales)</li>
+      <li>Los datos de entrada ya contienen <strong>imprecisiones propias</strong> del mundo físico o de mediciones</li>
+    </ul>
+    <p style="margin-top:1rem; color: var(--muted); font-size:0.9rem;">
+      Consecuencia: toda solución numérica <strong>contiene error</strong>. El objetivo es controlarlo y cuantificarlo.
+    </p>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide" id="s3">
+    <div class="eyebrow">Clasificación</div>
+    <h2>Las Fuentes Principales de Error</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>Error del Modelo</h3>
+        <p>Las hipótesis o condiciones físicas son incorrectas o demasiado simplificadas.</p>
+      </div>
+      <div class="card blue">
+        <h3>Error del Método</h3>
+        <p>Se formula una aproximación cuando el problema exacto no tiene solución directa.</p>
+      </div>
+      <div class="card green">
+        <h3>Error Residual</h3>
+        <p>Series infinitas truncadas a un número finito de términos.</p>
+      </div>
+      <div class="card gold">
+        <h3>Error Inicial</h3>
+        <p>Parámetros de entrada con valores solo aproximadamente conocidos.</p>
+      </div>
+      <div class="card">
+        <h3>Error de Redondeo</h3>
+        <p>Representación finita de los números en la memoria — el más analizado hoy.</p>
+      </div>
+      <div class="card blue">
+        <h3>Error de Operación</h3>
+        <p>Operaciones sobre números aproximados o aproximaciones de operaciones exactas.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide" id="s4">
+    <div class="eyebrow">Causa principal Nº 1</div>
+    <h2>Error de Truncamiento</h2>
+    <p style="margin-bottom:0.8rem;">Ocurre al aproximar un proceso <strong>infinito</strong> con uno <strong>finito</strong>. El caso más importante: la Serie de Taylor.</p>
+    <div class="math math-block">f(x) = f(a) + h·f′(a) + (h²/2!)·f″(a) + (h³/3!)·f‴(a) + ···</div>
+    <p style="margin: 0.6rem 0 0.3rem;">Al truncar en el término N, el error cometido es:</p>
+    <div class="math math-block">O(h<sup>N+1</sup>) = h<sup>N+1</sup>/(N+1)! · f<sup>(N+1)</sup>(a + ξh),  0 ≤ ξ ≤ 1</div>
+    <p style="margin-top:0.8rem; color:var(--muted); font-size:0.88rem;">
+      Cuanto mayor N (más términos), menor error de truncamiento — pero mayor costo computacional.
+    </p>
+  </div>
+
+  <!-- SLIDE 5 -->
+  <div class="slide" id="s5">
+    <div class="eyebrow">Causa principal Nº 2 · IEEE 754</div>
+    <h2>Representación de Punto Flotante</h2>
+    <p style="margin-bottom:0.5rem;">Doble precisión (64 bits) — el estándar de toda computadora moderna:</p>
+    <div class="bit-diagram" role="img" aria-label="Distribución de 64 bits en punto flotante doble precisión">
+      <div class="bit-seg s">
+        <span class="bit-label">Signo</span>
+        <span class="bit-count">1</span>
+        <span class="bit-name">bit</span>
+      </div>
+      <div class="bit-seg e">
+        <span class="bit-label">Exponente</span>
+        <span class="bit-count">11</span>
+        <span class="bit-name">bits</span>
+      </div>
+      <div class="bit-seg m">
+        <span class="bit-label">Mantisa (fracción)</span>
+        <span class="bit-count">52</span>
+        <span class="bit-name">bits</span>
+      </div>
+    </div>
+    <div class="stats" style="margin-top:1rem;">
+      <div class="stat">
+        <div class="stat-val">10<sup style="font-size:0.8rem">308</sup></div>
+        <div class="stat-label">Máximo representable</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">10<sup style="font-size:0.8rem">−308</sup></div>
+        <div class="stat-label">Mínimo normal (2⁻¹⁰²²)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">10<sup style="font-size:0.8rem">−324</sup></div>
+        <div class="stat-label">Mínimo subnormal (2⁻¹⁰⁷⁴)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">15–16</div>
+        <div class="stat-label">Dígitos significativos</div>
+      </div>
+    </div>
+    <div class="cols" style="margin-top:1rem; max-width:820px;">
+      <div class="card green">
+        <h3>Números subnormales</h3>
+        <p>Cuando el número cae por debajo de 2⁻¹⁰²² el exponente se congela en −1022 y la mantisa pierde un bit por cada halving. Permiten 52 pasos extra antes de llegar a cero — de ahí que el underflow tome 1022 + 52 + 1 = <strong>1075</strong> iteraciones desde 1.0.</p>
+      </div>
+      <div class="card gold">
+        <h3>Cancelación por absorción</h3>
+        <p>Si sumas un número enorme con uno diminuto cuya diferencia de magnitud supera los 15–16 dígitos de precisión, el pequeño desaparece sin dejar rastro: <strong>A + B = A</strong>. El orden de operaciones en una suma importa.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6 -->
+  <div class="slide" id="s6">
+    <div class="eyebrow">Error de Redondeo</div>
+    <h2>Epsilon de Máquina</h2>
+    <p style="margin-bottom:0.6rem;">El número más pequeño <em>ε</em> tal que la computadora puede distinguir <em>1 + ε</em> de <em>1</em>:</p>
+    <div class="math math-block">ε<sub>m</sub> = 2<sup>−52</sup> ≈ 2.22 × 10<sup>−16</sup></div>
+    <pre><span class="comment"># Cálculo del epsilon de máquina</span>
+epsilon &lt;- 1.0
+while ((epsilon / 2 + 1) &gt; 1) epsilon &lt;- epsilon / 2
+cat("Epsilon calculado: ", epsilon, "\n")
+cat("Valor en .Machine:", .Machine$double.eps, "\n")
+
+<span class="result">Epsilon calculado:  2.220446e-16
+Valor en .Machine:  2.220446e-16</span></pre>
+    <div class="cols" style="margin-top:0.8rem;">
+      <div class="card green">
+        <h3>Precisión relativa, no absoluta</h3>
+        <p>El gap entre floats consecutivos depende de la magnitud:</p>
+        <ul style="margin-top:0.4rem; font-family:'Consolas',monospace; font-size:0.82rem; color:var(--code-c); list-style:none; padding:0;">
+          <li>cerca de &nbsp;&nbsp;1 &nbsp;→ gap = 2⁻⁵²</li>
+          <li>cerca de &nbsp;&nbsp;2 &nbsp;→ gap = 2⁻⁵¹</li>
+          <li>cerca de 0.5 → gap = 2⁻⁵³</li>
+        </ul>
+        <p style="margin-top:0.4rem;">La precisión es siempre <em>2⁻⁵² × magnitud</em>.</p>
+      </div>
+      <div class="card gold">
+        <h3>Cuándo se pierden dos números</h3>
+        <p>Dos números son indistinguibles si su diferencia es menor que <em>2⁻⁵² × su magnitud</em>. La absorción ocurre cuando la <strong>razón</strong> entre ellos supera 2⁵² ≈ 10¹⁶:</p>
+        <ul style="margin-top:0.4rem; font-size:0.83rem;">
+          <li>10¹⁰⁰ + 10⁸³ → razón 10¹⁷ &gt; 10¹⁶ &nbsp;✗ se absorbe</li>
+          <li>10¹⁰⁰ + 10⁸⁵ → razón 10¹⁵ &lt; 10¹⁶ &nbsp;✓ sobrevive</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7 -->
+  <div class="slide" id="s7">
+    <div class="eyebrow">Desbordamiento</div>
+    <h2>Overflow y Underflow</h2>
+    <div class="cols" style="margin-bottom:0.8rem;">
+      <div class="card">
+        <h3>Overflow</h3>
+        <p>Número <strong>mayor</strong> que el máximo representable → la computadora devuelve <code style="color:var(--math)">Inf</code></p>
+      </div>
+      <div class="card blue">
+        <h3>Underflow</h3>
+        <p>Número <strong>menor</strong> que el mínimo positivo → la computadora lo redondea a <code style="color:var(--exp-c)">0</code></p>
+      </div>
+    </div>
+    <pre><span class="comment"># Overflow: multiplicar por 2 hasta Inf</span>
+x &lt;- 1.0; i &lt;- 0
+while (is.finite(x)) { x &lt;- x * 2; i &lt;- i + 1 }
+<span class="result">Overflow despues de 1024 multiplicaciones  →  Inf</span>
+
+<span class="comment"># Underflow: dividir por 2 hasta 0</span>
+y &lt;- 1.0; j &lt;- 0
+while (y &gt; 0) { y &lt;- y / 2; j &lt;- j + 1 }
+<span class="result">Underflow despues de 1075 divisiones       →  0</span></pre>
+  </div>
+
+  <!-- SLIDE 8 -->
+  <div class="slide" id="s8">
+    <div class="eyebrow">Medidas del Error</div>
+    <h2>Error Absoluto, Relativo y Porcentual</h2>
+    <p style="margin-bottom:0.8rem;">Sea <em>A</em> el valor exacto y <em>a</em> la aproximación:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Medida</th>
+          <th>Fórmula</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Error absoluto</td>
+          <td>ξ<sub>a</sub> = |A − a|</td>
+          <td>Diferencia directa en las unidades del problema</td>
+        </tr>
+        <tr>
+          <td>Error relativo</td>
+          <td>δ<sub>a</sub> = ξ<sub>a</sub> / |A|</td>
+          <td>Proporción del error respecto al valor exacto</td>
+        </tr>
+        <tr>
+          <td>Error porcentual</td>
+          <td>ε<sub>a</sub> = δ<sub>a</sub> × 100%</td>
+          <td>Error relativo expresado en porcentaje</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:1rem; font-size:0.88rem;">
+      <strong>Ejemplo:</strong> Si A = π = 3.14159… y a = 3.1416, entonces<br>
+      <span style="color:var(--math);">ξ<sub>a</sub> ≈ 7.3 × 10⁻⁶  ·  δ<sub>a</sub> ≈ 2.3 × 10⁻⁶  ·  ε<sub>a</sub> ≈ 0.00023%</span>
+    </p>
+  </div>
+
+  <!-- SLIDE 9 -->
+  <div class="slide" id="s9">
+    <div class="eyebrow">Conclusiones · Demostración</div>
+    <h2>Conclusiones</h2>
+    <ul class="concl" style="list-style:none; padding:0; max-width:720px;">
+      <li><span class="tag">1</span>Todo resultado numérico contiene error — entenderlo es parte del método</li>
+      <li><span class="tag">2</span>El error de truncamiento crece con menos términos en la serie; el de redondeo es intrínseco al hardware</li>
+      <li><span class="tag">3</span>El epsilon de máquina (~2.22 × 10⁻¹⁶) es el límite de precisión relativa en doble precisión</li>
+      <li><span class="tag">4</span>Overflow e underflow son consecuencias directas de los 11 bits del exponente</li>
+      <li><span class="tag">5</span>Siempre medir el error de forma relativa — el error absoluto sin contexto no dice nada</li>
+    </ul>
+    <p style="margin-top:1.4rem; color:var(--muted); font-size:0.9rem;">
+      A continuación: demostración en vivo con R en VS Code.
+    </p>
+  </div>
+
+</div>
+
+<nav class="nav-bar" aria-label="Navegación de diapositivas">
+  <button class="nav-btn" id="prev" aria-label="Diapositiva anterior">&#8592;</button>
+  <span class="slide-counter" id="counter" aria-live="polite">1 / 9</span>
+  <button class="nav-btn" id="next" aria-label="Siguiente diapositiva">&#8594;</button>
+</nav>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total  = slides.length;
+  let cur = 0;
+
+  const counter   = document.getElementById('counter');
+  const cornerNum = document.getElementById('corner-num');
+  const progress  = document.getElementById('progress');
+  const prevBtn   = document.getElementById('prev');
+  const nextBtn   = document.getElementById('next');
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function go(idx) {
+    if (idx < 0 || idx >= total) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('out');
+    setTimeout(() => slides[cur].classList.remove('out'), 300);
+    cur = idx;
+    slides[cur].classList.add('active');
+    counter.textContent   = (cur + 1) + ' / ' + total;
+    cornerNum.textContent = pad(cur + 1) + ' / ' + pad(total);
+    progress.style.width  = ((cur + 1) / total * 100) + '%';
+    prevBtn.disabled = cur === 0;
+    nextBtn.disabled = cur === total - 1;
+  }
+
+  prevBtn.addEventListener('click', () => go(cur - 1));
+  nextBtn.addEventListener('click', () => go(cur + 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') go(cur + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                     go(cur - 1);
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End')  go(total - 1);
+  });
+
+  go(0);
+</script>
+</body>
+</html>
