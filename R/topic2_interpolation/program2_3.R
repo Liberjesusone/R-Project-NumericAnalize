@@ -13,7 +13,7 @@ newton_divided <- function(x_data, f_data, x_target = NULL) {
     }
   }
 
-  # Tabla (mismo formato que el libro)
+  # Table
   cat(" I    X(I)     ", paste(sprintf("F(I,I+%d)  ", 0:(n-1)), collapse=""), "\n")
   for (i in 1:n) {
     j <- n - i

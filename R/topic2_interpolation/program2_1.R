@@ -22,7 +22,7 @@ lagrange <- function(x_data, f_data, xa) {
 # ── Datos del libro (ejemplo 2-1) ──────────────────────────────
 cat("=== PROGRAMA 2-1: Interpolacion de Lagrange ===\n\n")
 
-x <- c(1,    2,    3,    4   )
+x <- c(1,    2,    3,    4)
 f <- c(0.671, 0.620, 0.567, 0.512)
 
 cat("Tabla de valores:\n")
