@@ -1,0 +1,769 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Integración Numérica</title>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body,{
+    delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false}
+    ],
+    ignoredTags:['script','noscript','style','textarea','pre','code'],
+    throwOnError:false
+  })">
+</script>
+
+<style>
+  :root {
+    --bg:#07111F; --surface:#0E2040; --surface2:#162E55; --border:#1E3F6E;
+    --text:#C9D6E8; --muted:#5B7898; --accent:#E8A93A; --accent2:#3AC9C0;
+    --green:#4ADE80; --red:#F87171; --card-bg:rgba(14,32,64,0.85);
+  }
+  @media(prefers-color-scheme:light){:root{
+    --bg:#EEF2F8; --surface:#DCE4F0; --surface2:#C8D4E8; --border:#9AAEC8;
+    --text:#0D1E35; --muted:#4A6080; --accent:#B8760A; --accent2:#1A8C84;
+    --green:#16803C; --red:#B91C1C; --card-bg:rgba(220,228,240,0.9);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#07111F; --surface:#0E2040; --surface2:#162E55; --border:#1E3F6E;
+    --text:#C9D6E8; --muted:#5B7898; --accent:#E8A93A; --accent2:#3AC9C0;
+    --green:#4ADE80; --red:#F87171; --card-bg:rgba(14,32,64,0.85);
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF2F8; --surface:#DCE4F0; --surface2:#C8D4E8; --border:#9AAEC8;
+    --text:#0D1E35; --muted:#4A6080; --accent:#B8760A; --accent2:#1A8C84;
+    --green:#16803C; --red:#B91C1C; --card-bg:rgba(220,228,240,0.9);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:17px;height:100dvh;overflow:hidden;user-select:none}
+  body::before{content:'';position:fixed;inset:0;
+    background-image:linear-gradient(var(--border) 1px,transparent 1px),
+      linear-gradient(90deg,var(--border) 1px,transparent 1px);
+    background-size:44px 44px;opacity:.22;pointer-events:none}
+  #cc{position:fixed;inset:0;pointer-events:none;opacity:.16}
+
+  .katex-display{margin:.4em 0 !important;overflow-x:auto;overflow-y:hidden}
+  .katex{font-size:1.05em !important;color:var(--text)}
+
+  .fbox{background:var(--surface);border:1px solid var(--border);
+    border-left:3px solid var(--accent);border-radius:8px;
+    padding:.9rem 1.6rem;max-width:860px;width:100%;overflow-x:auto}
+  .fbox.tl{border-left-color:var(--accent2)}
+  .fbox.rd{border-left-color:var(--red)}
+  .fsep{width:100%;height:1px;background:var(--border);margin:.55rem 0}
+
+  .deck{width:100%;height:100dvh;position:relative}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;padding:2.2rem 3.2rem;
+    opacity:0;pointer-events:none;transition:opacity .35s ease}
+  .slide.active{opacity:1;pointer-events:all}
+
+  #progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);transition:width .4s;z-index:100}
+  #dots{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem;z-index:100}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);cursor:pointer;transition:background .3s,transform .3s}
+  .dot.active{background:var(--accent);transform:scale(1.4)}
+  #counter{position:fixed;bottom:1.5rem;right:2rem;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .nb{position:fixed;top:50%;transform:translateY(-50%);background:var(--surface);
+    border:1px solid var(--border);color:var(--muted);font-size:1.2rem;
+    width:2.4rem;height:2.4rem;border-radius:50%;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;transition:color .2s,border-color .2s;z-index:100}
+  .nb:hover{color:var(--text);border-color:var(--accent)}
+  #bp{left:1rem} #bn{right:1rem}
+
+  .ey{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.8rem}
+  h1{font-size:clamp(2.4rem,5vw,3.8rem);font-weight:700;line-height:1.08;text-wrap:balance}
+  h1 em{font-style:normal;color:var(--accent)}
+  h2{font-size:clamp(1.4rem,3vw,2.1rem);font-weight:700;text-wrap:balance;margin-bottom:1.1rem}
+  h2 em{font-style:normal;color:var(--accent)}
+  .sub-t{font-size:1rem;color:var(--muted);margin-top:1.1rem;letter-spacing:.03em}
+
+  .cards{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;width:100%;max-width:960px}
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
+    padding:1rem 1.2rem;flex:1 1 200px;backdrop-filter:blur(6px)}
+  .ct{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);font-weight:600;margin-bottom:.45rem}
+  .card p{font-size:.88rem;line-height:1.5}
+  .card.ac{border-color:var(--accent)} .card.tc{border-color:var(--accent2)}
+  .card.rc{border-color:var(--red)}
+
+  .tc2{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;width:100%;max-width:940px}
+  @media(max-width:680px){.tc2{grid-template-columns:1fr}}
+
+  .tw{overflow-x:auto;max-width:100%}
+  table{border-collapse:collapse;font-size:.82rem;font-variant-numeric:tabular-nums;width:100%}
+  th{background:var(--surface2);color:var(--accent);font-size:.7rem;letter-spacing:.09em;
+    text-transform:uppercase;padding:.45rem .7rem;border:1px solid var(--border);white-space:nowrap}
+  td{padding:.4rem .7rem;border:1px solid var(--border);color:var(--text);
+    font-family:'Courier New',monospace;white-space:nowrap}
+  tr:nth-child(even) td{background:var(--surface)}
+  .td{color:var(--accent2);font-weight:600} .tu{color:var(--accent);font-weight:700}
+  .bad{color:var(--red);font-weight:700} .good{color:var(--green);font-weight:600}
+
+  ul.bl{list-style:none;padding:0;max-width:820px}
+  ul.bl li{padding:.4rem 0 .4rem 1.4rem;position:relative;font-size:.9rem;
+    border-bottom:1px solid var(--border);line-height:1.5}
+  ul.bl li:last-child{border-bottom:none}
+  ul.bl li::before{content:'›';position:absolute;left:0;color:var(--accent);font-weight:700}
+  ul.bl li strong{color:var(--accent)} ul.bl li em{color:var(--accent2);font-style:normal}
+
+  .co{background:#000d1a;border:1px solid var(--border);border-radius:8px;
+    padding:.8rem 1rem;font-family:'Courier New',monospace;font-size:.75rem;
+    color:#7EC8A4;line-height:1.55;overflow-x:auto}
+  .co .cm{color:var(--muted)} .co .kw{color:var(--accent2)} .co .vl{color:var(--accent)}
+
+  .cn{display:flex;gap:.75rem;flex-direction:column;max-width:760px;width:100%}
+  .ci{display:flex;gap:.9rem;align-items:flex-start;background:var(--card-bg);
+    border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem}
+  .cn-n{color:var(--accent);font-size:1.15rem;font-weight:700;min-width:1.5rem;line-height:1.2}
+  .ci p{font-size:.86rem;line-height:1.5}
+  .ci p strong{color:var(--accent2)}
+
+  #s0{text-align:center;gap:1rem}
+  .tr{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-top:1.4rem}
+  .tg{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid var(--border);border-radius:999px;padding:.3rem .85rem;color:var(--muted)}
+
+  /* SVG diagrams */
+  svg.dg{width:100%;max-width:420px;height:auto;display:block;margin:0 auto}
+  svg.dg .curve{fill:none;stroke:var(--accent2);stroke-width:2.5}
+  svg.dg .shape{fill:var(--accent);fill-opacity:.16;stroke:var(--accent);stroke-width:1.5}
+  svg.dg .axis{stroke:var(--muted);stroke-width:1.5}
+  svg.dg .gl{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+  svg.dg text{fill:var(--text);font-size:12px;font-family:'Segoe UI',sans-serif}
+  svg.dg .pt{fill:var(--accent)}
+</style>
+</head>
+<body>
+
+<canvas id="cc"></canvas>
+<div id="progress"></div>
+
+<div class="deck">
+
+  <!-- 0 · Título -->
+  <div class="slide active" id="s0">
+    <div class="ey">Capítulo 4 · Nakamura</div>
+    <h1>Integración<br><em>Numérica</em></h1>
+    <p class="sub-t">Métodos Numéricos Aplicados con Software · ULA–CeSiMo</p>
+    <div class="tr">
+      <span class="tg">Prog 4-1 · Trapecio y Simpson</span>
+      <span class="tg">Prog 4-2 · Newton-Cotes</span>
+      <span class="tg">Implementado en R</span>
+    </div>
+  </div>
+
+  <!-- 1 · Motivación -->
+  <div class="slide">
+    <div class="ey">Motivación</div>
+    <h2>¿Por qué integrar <em>numéricamente</em>?</h2>
+    <div class="cards">
+      <div class="card ac">
+        <div class="ct">Sin antiderivada</div>
+        <p>Muchas funciones <strong style="color:var(--accent)">no tienen primitiva elemental</strong>: $e^{-x^2}$, $\frac{\sin x}{x}$, $\sqrt{1+x^4}$.</p>
+      </div>
+      <div class="card">
+        <div class="ct">Solo hay datos</div>
+        <p>En un experimento no tenemos $f(x)$, tenemos una <strong style="color:var(--accent2)">tabla</strong> de mediciones.</p>
+      </div>
+      <div class="card tc">
+        <div class="ct">La idea central</div>
+        <p>Reemplazar $f$ por un <strong style="color:var(--accent)">polinomio interpolante</strong> e integrar ese polinomio, que sí sabemos integrar.</p>
+      </div>
+      <div class="card">
+        <div class="ct">Conexión con el Cap. 2</div>
+        <p>Integrar numéricamente $=$ <em>interpolar</em> $+$ <em>integrar exacto</em>. El grado del polinomio define la regla.</p>
+      </div>
+    </div>
+    <div class="fbox tl" style="margin-top:1.1rem;max-width:640px">
+      <div class="tw">
+        <table>
+          <thead><tr><th>Polinomio</th><th>Regla resultante</th><th>Puntos</th></tr></thead>
+          <tbody>
+            <tr><td>Recta (grado 1)</td><td class="td">Trapecio</td><td>2</td></tr>
+            <tr><td>Parábola (grado 2)</td><td class="td">Simpson 1/3</td><td>3</td></tr>
+            <tr><td>Cúbica (grado 3)</td><td class="td">Simpson 3/8</td><td>4</td></tr>
+            <tr><td>Grado $N$</td><td class="tu">Newton-Cotes $N$</td><td>$N+1$</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · Trapecio -->
+  <div class="slide">
+    <div class="ey">La regla más simple</div>
+    <h2>Regla del <em>Trapecio</em></h2>
+    <div class="tc2">
+      <div>
+        <svg class="dg" viewBox="0 0 400 230">
+          <line class="axis" x1="30" y1="200" x2="380" y2="200"/>
+          <line class="axis" x1="30" y1="200" x2="30" y2="20"/>
+          <path class="curve" d="M 40,170 Q 130,60 220,80 T 370,40"/>
+          <polygon class="shape" points="70,200 70,140 150,90 150,200"/>
+          <polygon class="shape" points="150,200 150,90 230,81 230,200"/>
+          <polygon class="shape" points="230,200 230,81 310,80 310,200"/>
+          <circle class="pt" cx="70"  cy="140" r="4"/>
+          <circle class="pt" cx="150" cy="90"  r="4"/>
+          <circle class="pt" cx="230" cy="81"  r="4"/>
+          <circle class="pt" cx="310" cy="80"  r="4"/>
+          <text x="63"  y="218">$x_0$</text>
+          <text x="143" y="218">$x_1$</text>
+          <text x="223" y="218">$x_2$</text>
+          <text x="303" y="218">$x_3$</text>
+          <text x="330" y="35">$f(x)$</text>
+        </svg>
+        <p style="font-size:.8rem;color:var(--muted);text-align:center;margin-top:.4rem">
+          Se une cada par de puntos con una recta
+        </p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div class="fbox" style="padding:.7rem 1.1rem">
+          $$I \approx \frac{h}{2}\left[f_0 + 2\sum_{j=1}^{N-1}f_j + f_N\right]$$
+        </div>
+        <div class="card ac">
+          <div class="ct">Los pesos</div>
+          <p><strong style="color:var(--accent)">1, 2, 2, …, 2, 1</strong><br>El 2 aparece porque cada punto <em>interior</em> es compartido por dos trapecios adyacentes.</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">Error</div>
+          <p>$$E \approx -\tfrac{1}{12}(b-a)h^2\bar{f}''$$
+          Es $O(h^2)$: al duplicar $N$, el error se divide por <strong style="color:var(--accent)">4</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 · Simpson -->
+  <div class="slide">
+    <div class="ey">Parábolas en vez de rectas</div>
+    <h2>Reglas de <em>Simpson</em></h2>
+    <div class="tc2">
+      <div>
+        <svg class="dg" viewBox="0 0 400 200" style="max-width:360px">
+          <line class="axis" x1="30" y1="170" x2="380" y2="170"/>
+          <line class="axis" x1="30" y1="170" x2="30" y2="15"/>
+          <path class="shape" d="M 80,170 L 80,110 Q 200,25 320,70 L 320,170 Z"/>
+          <path class="curve" d="M 80,110 Q 200,25 320,70"/>
+          <circle class="pt" cx="80"  cy="110" r="4"/>
+          <circle class="pt" cx="200" cy="60"  r="4"/>
+          <circle class="pt" cx="320" cy="70"  r="4"/>
+          <text x="73"  y="188">$f_0$</text>
+          <text x="193" y="188">$f_1$</text>
+          <text x="313" y="188">$f_2$</text>
+        </svg>
+        <div class="fbox" style="padding:.6rem 1rem;margin-top:.5rem">
+          <p style="font-size:.75rem;color:var(--accent2);margin-bottom:.2rem">REGLA 1/3 &nbsp;·&nbsp; $N$ par</p>
+          $$I \approx \frac{h}{3}\bigl[f_0 + 4f_1 + 2f_2 + \cdots + f_N\bigr]$$
+          <div class="fsep"></div>
+          <p style="font-size:.75rem;color:var(--accent2);margin-bottom:.2rem">REGLA 3/8 &nbsp;·&nbsp; $N$ múltiplo de 3</p>
+          $$I \approx \frac{3h}{8}\bigl[f_0 + 3f_1 + 3f_2 + f_3\bigr]$$
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div class="card ac">
+          <div class="ct">Pesos de la regla 1/3</div>
+          <p><strong style="color:var(--accent)">1, 4, 2, 4, 2, …, 4, 1</strong><br>Alternan $4$ (impares) y $2$ (pares), con $1$ en los extremos.</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">Error</div>
+          <p>$$E \approx -\frac{(b-a)h^4}{180}f^{(iv)}$$
+          Es $O(h^4)$: al duplicar $N$ el error se divide por <strong style="color:var(--accent)">16</strong>.</p>
+        </div>
+        <div class="card">
+          <div class="ct">El bonus de simetría</div>
+          <p>Aunque la parábola es de grado 2, Simpson 1/3 integra <em>exactamente</em> también las cúbicas — gana un orden de regalo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 · Comparación de precisión -->
+  <div class="slide">
+    <div class="ey">Ejemplos 4.1 y 4.3 · Cuerpo de revolución</div>
+    <h2>Trapecio <em>vs</em> Simpson</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:.7rem">
+      $f(x)=\pi\left(1+(x/2)^2\right)^2$ sobre $[0,2]$ &nbsp;·&nbsp; valor exacto $I = 11.7286$
+    </p>
+    <div class="tw" style="max-width:680px;width:100%">
+      <table>
+        <thead>
+          <tr><th>$N$</th><th>$h$</th><th>Trapecio</th><th>Error</th><th>Simpson</th><th>Error</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2</td><td>1.0</td><td>12.7627</td><td class="bad">1.034</td><td>11.7809</td><td class="td">−0.052</td></tr>
+          <tr><td>4</td><td>0.5</td><td>11.9895</td><td class="bad">−0.261</td><td>11.7318</td><td class="td">−0.0032</td></tr>
+          <tr><td>8</td><td>0.25</td><td>11.7940</td><td>−0.065</td><td>11.7288</td><td class="good">−0.0002</td></tr>
+          <tr><td>16</td><td>0.125</td><td>11.7449</td><td>−0.016</td><td class="tu">11.7286</td><td class="good">0</td></tr>
+          <tr><td>32</td><td>0.0625</td><td class="td">11.7326</td><td>−0.004</td><td class="tu">11.7286</td><td class="good">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fbox rd" style="max-width:680px;margin-top:1rem">
+      <p style="font-size:.9rem">
+        <strong style="color:var(--accent)">El dato que impresiona:</strong>
+        el trapecio con $N=32$ tiene la misma precisión que Simpson con $N=4$.
+        Simpson necesita <strong style="color:var(--accent2)">8 veces menos evaluaciones</strong>
+        de la función para el mismo resultado.
+      </p>
+    </div>
+  </div>
+
+  <!-- 5 · Análisis de error -->
+  <div class="slide">
+    <div class="ey">¿Por qué unas reglas ganan a otras?</div>
+    <h2>Análisis de <em>error</em></h2>
+    <div class="tw" style="max-width:880px;width:100%;margin-bottom:.8rem">
+      <table>
+        <thead>
+          <tr><th>Regla</th><th>Error de truncamiento</th><th>Orden</th><th>Exacta si $f$ es…</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--accent)">Trapecio</strong></td>
+            <td>$E \approx -\dfrac{1}{12}(b-a)\,h^2\,\bar{f}''$</td>
+            <td class="td">$O(h^2)$</td>
+            <td>recta (grado $\leq 1$)</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent)">Simpson 1/3</strong></td>
+            <td>$E \approx -\dfrac{(b-a)h^4}{180}f^{(iv)}$</td>
+            <td class="tu">$O(h^4)$</td>
+            <td>cúbica (grado $\leq 3$)</td>
+          </tr>
+          <tr>
+            <td>Simpson 3/8</td>
+            <td>$E \approx -\dfrac{3}{80}h^5 f^{(iv)}$</td>
+            <td class="td">$O(h^4)$</td>
+            <td>cúbica (grado $\leq 3$)</td>
+          </tr>
+          <tr>
+            <td>Newton-Cotes $N=4$</td>
+            <td>$E \approx -\dfrac{8}{945}h^7 f^{(vi)}$</td>
+            <td class="td">$O(h^6)$</td>
+            <td>grado $\leq 5$</td>
+          </tr>
+          <tr>
+            <td>Gauss orden $N$</td>
+            <td>—</td>
+            <td class="tu">exacto</td>
+            <td>grado $\leq 2N-1$</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tc2">
+      <div class="card ac">
+        <div class="ct">La derivada mide el "desvío"</div>
+        <p>El error depende de una <strong style="color:var(--accent)">derivada de orden alto</strong> porque mide cuánto se aleja $f$ del polinomio. Si $f$ <em>ya es</em> un polinomio de ese grado, esa derivada vale $0$ y el error <strong>desaparece</strong>.</p>
+      </div>
+      <div class="card tc">
+        <div class="ct">Qué pasa al duplicar $N$</div>
+        <p>$O(h^2)$ → el error se divide por <strong style="color:var(--accent)">4</strong><br>
+        $O(h^4)$ → el error se divide por <strong style="color:var(--accent)">16</strong><br>
+        Eso explica la tabla anterior: Simpson alcanza en $N=4$ lo que el trapecio necesita $N=32$.</p>
+      </div>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin-top:.7rem;max-width:820px;text-align:center">
+      $\bar{f}''$ y $f^{(iv)}$ se evalúan en un punto $\xi$ desconocido dentro de $[a,b]$ &nbsp;—&nbsp;
+      por eso las fórmulas <em>acotan</em> el error, no lo dan exacto.
+    </p>
+  </div>
+
+  <!-- 6 · Programa 4-1 -->
+  <div class="slide">
+    <div class="ey">Programa 4-1 · Nakamura pp. 141–143</div>
+    <h2>Implementación: el caso <em>$N$ impar</em></h2>
+    <div class="tc2">
+      <div>
+        <div class="card ac" style="margin-bottom:.7rem">
+          <div class="ct">El problema</div>
+          <p>La regla $1/3$ <strong style="color:var(--accent)">exige $N$ par</strong>. ¿Qué hacer si el usuario pide $N=5$?</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">La solución del libro</div>
+          <p>Arrancar con <strong style="color:var(--accent)">3/8</strong> sobre los 3 primeros intervalos. Lo que queda ($N-3$) ya es <em>par</em> → aplicar $1/3$.</p>
+        </div>
+        <div class="fbox" style="margin-top:.7rem;padding:.7rem 1.1rem">
+          <p style="font-size:.82rem;line-height:1.7">
+            $N=5,\; h=0.4$<br>
+            <span style="color:var(--accent)">3/8</span> sobre $[0,\ 1.2]$ &nbsp;→&nbsp; nodos $0,\,0.4,\,0.8,\,1.2$<br>
+            <span style="color:var(--accent2)">1/3</span> sobre $[1.2,\ 2.0]$ &nbsp;→&nbsp; nodos $1.2,\,1.6,\,2.0$
+          </p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div class="card">
+          <div class="ct">Código R</div>
+          <div class="co" style="margin-top:.4rem">
+<span class="kw">if</span> (n %% 2 != 0) {   <span class="cm"># N impar</span>
+  ls &lt;- 3            <span class="cm"># 3/8 consume 3</span>
+  <span class="cm"># ... pesos 1,3,3,1 ...</span>
+  ss &lt;- ss * h * 3/8
+}
+m &lt;- n - ls          <span class="cm"># resto: PAR</span>
+<span class="kw">for</span> (i <span class="kw">in</span> 0:m) {
+  x &lt;- a + h*(i + ls)  <span class="cm"># desplazado</span>
+  w &lt;- <span class="kw">if</span> (i %% 2 == 1) 4 <span class="kw">else</span> 2
+  <span class="kw">if</span> (i==0 || i==m) w &lt;- 1
+  s &lt;- s + w*f(x)
+}
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct">Dos detalles finos</div>
+          <p><strong>1.</strong> <code style="color:var(--accent2)">ls</code> desplaza el índice para no recontar nodos ya usados.<br>
+          <strong>2.</strong> El <code style="color:var(--accent2)">if</code> de extremos va <em>después</em> del de paridad — lo sobrescribe.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 · Salida verificada 4-1 -->
+  <div class="slide">
+    <div class="ey">Programa 4-1 · Verificación</div>
+    <h2>Salida <em>reproducida</em> en R</h2>
+    <div class="tw" style="max-width:640px;width:100%;margin-bottom:1rem">
+      <table>
+        <thead><tr><th>Caso</th><th>R (esta impl.)</th><th>Libro</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Trapecio, $N=10$</td><td class="tu">11.77048</td><td>11.77047</td>
+            <td class="good">✓ coincide</td>
+          </tr>
+          <tr>
+            <td>Simpson, $N=5$</td><td class="tu">11.73096</td><td>11.73095</td>
+            <td class="good">✓ coincide</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="bl">
+      <li>La diferencia en el <strong>último dígito</strong> es porque el FORTRAN usa la constante <code>3.14159</code> y R usa <code>pi</code> con precisión completa.</li>
+      <li>El caso $N=5$ confirma que la <em>combinación 3/8 + 1/3</em> está implementada correctamente.</li>
+      <li>Ambas reglas convergen al valor exacto $11.7286$ al aumentar $N$, pero a <strong>velocidades muy distintas</strong>.</li>
+    </ul>
+  </div>
+
+  <!-- 8 · Romberg -->
+  <div class="slide">
+    <div class="ey">Ejemplo 4.2 · Extrapolación de Richardson</div>
+    <h2>Integración de <em>Romberg</em></h2>
+    <div class="fbox" style="max-width:700px;margin-bottom:1rem">
+      $$E_h \approx \tfrac{1}{3}\bigl(I_h - I_{2h}\bigr) \qquad\Longrightarrow\qquad I \approx I_h + \tfrac{1}{3}\bigl(I_h - I_{2h}\bigr)$$
+    </div>
+    <div class="tc2">
+      <div>
+        <div class="card ac">
+          <div class="ct">La lógica</div>
+          <p>Si sabemos que $E_h \approx Ch^2$, entonces $E_{2h} \approx 4Ch^2$. Con <strong style="color:var(--accent)">dos cálculos</strong> podemos despejar $C$, estimar el error y <em>restarlo</em>.</p>
+        </div>
+        <div class="card tc" style="margin-top:.7rem">
+          <div class="ct">El efecto</div>
+          <p>Eleva la precisión de $O(h^2)$ a $O(h^4)$ <strong style="color:var(--accent)">sin evaluar ni un punto más</strong>.</p>
+        </div>
+      </div>
+      <div>
+        <div class="fbox tl" style="padding:.8rem 1.2rem">
+          <p style="font-size:.85rem;line-height:1.9;font-family:'Courier New',monospace">
+            $I_{h=0.5}\;\; = 11.9895$<br>
+            $I_{h=0.25} = 11.7940$<br>
+            <span style="color:var(--border)">─────────────────</span><br>
+            $E_{0.25} = \tfrac13(11.7940 - 11.9895)$<br>
+            <span style="margin-left:2.6rem">$= -0.0652$</span><br>
+            <span style="color:var(--border)">─────────────────</span><br>
+            <span style="color:var(--accent)">$I = 11.7940 - 0.0652 = \mathbf{11.7288}$</span>
+          </p>
+        </div>
+        <div class="card" style="margin-top:.7rem">
+          <div class="ct">Resultado</div>
+          <p>Con solo <strong style="color:var(--accent)">8 intervalos</strong> se alcanza la precisión del trapecio con <strong style="color:var(--accent2)">$N=128$</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9 · Newton-Cotes -->
+  <div class="slide">
+    <div class="ey">Programa 4-2 · La generalización</div>
+    <h2>Fórmulas de <em>Newton-Cotes</em></h2>
+    <div class="fbox" style="max-width:720px;margin-bottom:.9rem">
+      $$\int_a^b f(x)\,dx \approx \alpha\,h\bigl[w_0f_0 + w_1f_1 + \cdots + w_Nf_N\bigr], \qquad h=\frac{b-a}{N}$$
+    </div>
+    <div class="tc2">
+      <div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>$N$</th><th>$\alpha$</th><th>Pesos $w_i$</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>$1/2$</td><td class="td">1, 1 &nbsp;<span style="color:var(--muted)">← Trapecio</span></td></tr>
+              <tr><td>2</td><td>$1/3$</td><td class="td">1, 4, 1 &nbsp;<span style="color:var(--muted)">← Simpson 1/3</span></td></tr>
+              <tr><td>3</td><td>$3/8$</td><td class="td">1, 3, 3, 1 &nbsp;<span style="color:var(--muted)">← Simpson 3/8</span></td></tr>
+              <tr><td>4</td><td>$2/45$</td><td>7, 32, 12, 32, 7</td></tr>
+              <tr><td>5</td><td>$5/288$</td><td>19, 75, 50, 50, 75, 19</td></tr>
+              <tr><td>6</td><td>$1/140$</td><td>41, 216, 27, 272, …</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
+          Todas las reglas anteriores son <em>casos particulares</em>.
+        </p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div class="card ac">
+          <div class="ct">Cerradas vs abiertas</div>
+          <p><strong>Cerradas:</strong> evalúan $a$ y $b$. Más precisas.<br>
+          <strong>Abiertas:</strong> $w_0 = w_{N+2} = 0$. Sirven si $f$ es <em>singular</em> en los extremos.</p>
+        </div>
+        <div class="card rc">
+          <div class="ct">Peligro de orden alto</div>
+          <p>Para $N \geq 8$ los pesos <strong style="color:var(--red)">alternan de signo</strong> y crecen mucho ($272400$, $-260550$, …) → riesgo de <em>cancelación catastrófica</em>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10 · Validación y erratas -->
+  <div class="slide">
+    <div class="ey">Programa 4-2 · Hallazgo</div>
+    <h2>Validación detecta <em>erratas</em> del libro</h2>
+    <div class="fbox tl" style="max-width:720px;margin-bottom:.9rem">
+      <p style="font-size:.85rem;margin-bottom:.4rem">Toda fórmula de Newton-Cotes debe integrar exactamente $f(x)=1$, lo que obliga a:</p>
+      $$\alpha \cdot \sum_i w_i = N$$
+    </div>
+    <div class="tw" style="max-width:700px;width:100%">
+      <table>
+        <thead><tr><th>$N$</th><th>Peso</th><th>$\sum w$</th><th>$\alpha\cdot\sum w$</th><th>¿$=N$?</th></tr></thead>
+        <tbody>
+          <tr><td>8</td><td class="bad">10946 (libro)</td><td>29250</td><td class="bad">8.254</td><td class="bad">✗</td></tr>
+          <tr><td>8</td><td class="good">10496 (correcto)</td><td>28350</td><td class="good">8.000</td><td class="good">✓</td></tr>
+          <tr><td>9</td><td class="bad">5788 (libro)</td><td>89620</td><td class="bad">9.002</td><td class="bad">✗</td></tr>
+          <tr><td>9</td><td class="good">5778 (correcto)</td><td>89600</td><td class="good">9.000</td><td class="good">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="fbox rd" style="max-width:720px;margin-top:.9rem">
+      <p style="font-size:.87rem">
+        <strong style="color:var(--accent)">Confirmación:</strong> usando el peso erróneo $5788$ en el ejemplo 4.4
+        se obtiene $L = 8.00198$ — exactamente el $8.00197$ que reporta la tabla del libro.
+        Lo que el texto atribuye a <em>"errores de redondeo"</em> es en realidad una
+        <strong style="color:var(--red)">errata de imprenta</strong>.
+      </p>
+    </div>
+  </div>
+
+  <!-- 11 · Ejemplo 4.4 -->
+  <div class="slide">
+    <div class="ey">Ejemplo 4.4 · Longitud de arco</div>
+    <h2>Newton-Cotes en <em>acción</em></h2>
+    <div class="tc2">
+      <div>
+        <div class="fbox" style="padding:.8rem 1.2rem;margin-bottom:.7rem">
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem">Cardioide $r = 2(1+\cos\theta)$, $0\le\theta\le\pi$</p>
+          $$L = \int_0^\pi \sqrt{r^2 + \left(\frac{dr}{d\theta}\right)^2}\,d\theta$$
+          <div class="fsep"></div>
+          <p style="font-size:.85rem;text-align:center;color:var(--accent)">Valor exacto: $L = 8$</p>
+        </div>
+        <div class="card ac">
+          <div class="ct">Convergencia</div>
+          <p>Con los <strong style="color:var(--accent)">pesos correctos</strong>, el método llega a un error de $\sim10^{-13}$ en $N=10$ sin degradarse.</p>
+        </div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>$N$</th><th>R (correcto)</th><th>Error</th><th>Libro</th></tr></thead>
+          <tbody>
+            <tr><td>2</td><td>8.01824</td><td>1.8e−2</td><td>8.01823</td></tr>
+            <tr><td>3</td><td>8.00804</td><td>8.0e−3</td><td>8.00803</td></tr>
+            <tr><td>4</td><td>7.99993</td><td>6.8e−5</td><td>7.99993</td></tr>
+            <tr><td>5</td><td>7.99996</td><td>3.8e−5</td><td>7.99996</td></tr>
+            <tr><td>6</td><td>8.00000</td><td>2.1e−7</td><td>8.00000</td></tr>
+            <tr><td>7</td><td>8.00000</td><td>1.3e−7</td><td>8.00000</td></tr>
+            <tr><td>8</td><td>8.00000</td><td>4.7e−10</td><td>8.00000</td></tr>
+            <tr><td>9</td><td class="good">8.00000</td><td>3.0e−10</td><td class="bad">8.00197</td></tr>
+            <tr><td>10</td><td class="good">8.00000</td><td class="tu">8.2e−13</td><td class="bad">7.99201</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12 · Gauss -->
+  <div class="slide">
+    <div class="ey">Ejemplo 4.5 · Más allá de Newton-Cotes</div>
+    <h2>Cuadratura de <em>Gauss</em></h2>
+    <div class="tc2">
+      <div>
+        <div class="card ac" style="margin-bottom:.7rem">
+          <div class="ct">La idea genial</div>
+          <p>Newton-Cotes <strong>fija</strong> los puntos equiespaciados y solo optimiza los pesos. Gauss también optimiza <strong style="color:var(--accent)">dónde poner los puntos</strong>.</p>
+        </div>
+        <div class="card tc">
+          <div class="ct">El conteo</div>
+          <p>Con $N$ puntos hay $2N$ incógnitas ($N$ pesos $+$ $N$ posiciones) → se pueden imponer $2N$ condiciones → exactitud hasta grado <strong style="color:var(--accent)">$2N-1$</strong>.</p>
+        </div>
+        <div class="fbox" style="margin-top:.7rem;padding:.7rem 1.1rem">
+          $$\int_a^b f(z)\,dz \approx \frac{b-a}{2}\sum_{k=1}^{N} w_k f(z_k)$$
+        </div>
+      </div>
+      <div>
+        <div class="fbox tl" style="padding:.8rem 1.1rem;margin-bottom:.7rem">
+          <p style="font-size:.78rem;color:var(--accent2);margin-bottom:.4rem">DEDUCCIÓN PARA $N=2$ EN $[-1,1]$</p>
+          <p style="font-size:.8rem;line-height:1.8;font-family:'Courier New',monospace">
+            $2 = w_1 + w_2$<br>
+            $0 = w_1x_1 + w_2x_2$<br>
+            $\tfrac23 = w_1x_1^2 + w_2x_2^2$<br>
+            $0 = w_1x_1^3 + w_2x_2^3$
+          </p>
+          <div class="fsep"></div>
+          <p style="font-size:.82rem">Por simetría $x_2=-x_1$ &nbsp;⟹&nbsp; $w_1=w_2=1$ y</p>
+          $$x_1 = \tfrac{1}{\sqrt3} = 0.5773503$$
+        </div>
+        <div class="card">
+          <div class="ct">Limitación</div>
+          <p>Los puntos de Gauss <strong style="color:var(--red)">no son equiespaciados</strong> → no sirve para datos tabulados, solo para funciones evaluables donde uno quiera.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13 · Comparación final -->
+  <div class="slide">
+    <div class="ey">Panorama del capítulo 4</div>
+    <h2>Comparación de <em>métodos</em></h2>
+    <div class="tw" style="max-width:900px;width:100%">
+      <table>
+        <thead>
+          <tr><th>Método</th><th>Error</th><th>Requiere</th><th>Ventaja</th><th>Nakamura</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--accent)">Trapecio</strong></td>
+            <td class="td">$O(h^2)$</td><td>Cualquier $N$</td>
+            <td style="color:var(--green)">Simple y robusto</td><td>Prog 4-1</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent)">Simpson 1/3</strong></td>
+            <td class="tu">$O(h^4)$</td><td>$N$ par</td>
+            <td style="color:var(--green)">Mejor costo/precisión</td><td>Prog 4-1</td>
+          </tr>
+          <tr>
+            <td>Simpson 3/8</td>
+            <td class="td">$O(h^4)$</td><td>$N$ múltiplo de 3</td>
+            <td style="color:var(--muted)">Completa a la 1/3</td><td>Prog 4-1</td>
+          </tr>
+          <tr>
+            <td>Romberg</td>
+            <td class="td">$O(h^4)$</td><td>Dos corridas</td>
+            <td style="color:var(--green)">Precisión "gratis"</td><td>Ej. 4.2</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent)">Newton-Cotes</strong></td>
+            <td class="td">hasta $O(h^{13})$</td><td>Tabla de pesos</td>
+            <td style="color:var(--muted)">Generaliza todo</td><td>Prog 4-2</td>
+          </tr>
+          <tr>
+            <td>Gauss</td>
+            <td class="tu">exacto grado $2N-1$</td><td>Puntos libres</td>
+            <td style="color:var(--green)">Máxima precisión</td><td>Tabla 4.4</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin-top:.8rem">
+      Regla práctica: <em>no</em> subir el orden de Newton-Cotes — mejor
+      <strong style="color:var(--accent)">subdividir</strong> y aplicar reglas de orden bajo repetidamente.
+    </p>
+  </div>
+
+  <!-- 14 · Conclusiones -->
+  <div class="slide">
+    <div class="ey">Cierre</div>
+    <h2><em>Conclusiones</em></h2>
+    <div class="cn">
+      <div class="ci">
+        <div class="cn-n">1</div>
+        <p>Integrar numéricamente es <strong>interpolar y luego integrar exacto</strong>. El grado del polinomio determina la regla: recta → trapecio, parábola → Simpson.</p>
+      </div>
+      <div class="ci">
+        <div class="cn-n">2</div>
+        <p>El <strong>Prog 4-1</strong> combina las reglas $3/8$ y $1/3$ para manejar cualquier $N$: si es impar arranca con $3/8$ y deja un resto par. Salida verificada contra el libro.</p>
+      </div>
+      <div class="ci">
+        <div class="cn-n">3</div>
+        <p><strong>Romberg</strong> da precisión gratis: combinando dos corridas del trapecio se pasa de $O(h^2)$ a $O(h^4)$ sin evaluar puntos nuevos.</p>
+      </div>
+      <div class="ci">
+        <div class="cn-n">4</div>
+        <p>La validación <strong>$\alpha\sum w = N$</strong> agregada al Prog 4-2 detectó <strong>dos erratas</strong> en la tabla 4.2 del libro, y explica una "anomalía" que el texto atribuía a errores de redondeo.</p>
+      </div>
+      <div class="ci">
+        <div class="cn-n">5</div>
+        <p>Lección transversal: <strong>nunca confiar en una tabla sin validarla</strong>. Una condición de consistencia simple ahorra horas de depuración.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.deck -->
+
+<button class="nb" id="bp">‹</button>
+<button class="nb" id="bn">›</button>
+<div id="dots"></div>
+<div id="counter"></div>
+
+<script>
+(function(){
+  const cv=document.getElementById('cc'),ctx=cv.getContext('2d');
+  const pts=[];const N=55;
+  function resize(){cv.width=innerWidth;cv.height=innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(let i=0;i<N;i++) pts.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18});
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>cv.width)p.vx*=-1;if(p.y<0||p.y>cv.height)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,Math.PI*2);
+      ctx.fillStyle='#3AC9C0';ctx.fill()});
+    pts.forEach((a,i)=>pts.slice(i+1).forEach(b=>{
+      const d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<110){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+        ctx.strokeStyle=`rgba(58,201,192,${.18*(1-d/110)})`;ctx.lineWidth=.7;ctx.stroke()}}));
+    requestAnimationFrame(draw)}
+  draw();
+
+  const slides=document.querySelectorAll('.slide');
+  const total=slides.length;
+  let cur=0;
+  const dotsEl=document.getElementById('dots');
+  const counter=document.getElementById('counter');
+  const progress=document.getElementById('progress');
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot';d.addEventListener('click',()=>go(i));dotsEl.appendChild(d)});
+  const dotEls=dotsEl.querySelectorAll('.dot');
+
+  function go(n){
+    slides[cur].classList.remove('active');
+    dotEls[cur].classList.remove('active');
+    cur=Math.max(0,Math.min(n,total-1));
+    slides[cur].classList.add('active');
+    dotEls[cur].classList.add('active');
+    counter.textContent=(cur+1)+' / '+total;
+    progress.style.width=((cur/(total-1))*100)+'%';
+  }
+  go(0);
+
+  document.getElementById('bp').addEventListener('click',()=>go(cur-1));
+  document.getElementById('bn').addEventListener('click',()=>go(cur+1));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')go(cur+1);
+    else if(e.key==='ArrowLeft')go(cur-1);
+  });
+})();
+</script>
+</body>
+</html>
