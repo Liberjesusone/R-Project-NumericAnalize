@@ -85,8 +85,12 @@ check_weights()
 
 # ── Salida del libro (p. 152): f(x) = sin(x), k = 6 datos, [0, 2] ─────────
 cat("--- Salida del libro: f(x) = sin(x) en [0, 2], k = 6 datos ---")
-res <- newton_cotes(sin, 0, 2, k = 6)
-cat(sprintf("\n Libro: 1.416117   Exacto: 1 - cos(2) = %.6f\n\n", 1 - cos(2)))
+res    <- newton_cotes(sin, 0, 2, k = 6)
+exacto <- 1 - cos(2)
+cat(sprintf("\n %-22s %12.6f\n", "R (esta impl.):",  res))
+cat(sprintf(" %-22s %12.6f\n",   "Libro:",           1.416117))
+cat(sprintf(" %-22s %12.6f\n",   "Exacto 1-cos(2):", exacto))
+cat(sprintf(" %-22s %12.2e\n\n", "Error absoluto:",  abs(exacto - res)))
 
 # ── Ejemplo 4.4: longitud de arco de la cardioide ─────────────────────────
 # r = 2(1 + cos t),  0 <= t <= pi

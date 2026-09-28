@@ -88,10 +88,16 @@ donde $\;h = \dfrac{b-a}{N}$, $\;x_n = a + nh$, $\;\alpha = \dfrac{Q}{R}$.
 | 9 | $9/89600$ | $2857,\ 15741,\ 1080,\ 19344,\ \mathbf{5778},\ \mathbf{5778},\ 19344,\ 1080,\ 15741,\ 2857$ | $-\frac{173}{14620}h^{11}f^{(x)}$ |
 | 10 | $5/299376$ | $16067,\ 106300,\ -48525,\ 272400,\ -260550,\ 427368,\ \dots$ (simétrico) | $-\frac{1346350}{326918592}h^{13}f^{(xii)}$ |
 
-> ⚠️ **Erratas detectadas.** La tabla transcrita del libro tiene dos pesos
-> mal impresos. Los valores correctos son los marcados en **negrita**:
-> - $N=8$: el libro imprime $10946$ → correcto **$10496$**
-> - $N=9$: el libro imprime $5788$ → correcto **$5778$**
+> ⚠️ **Erratas detectadas — tres en total.** Los valores correctos son los
+> marcados en **negrita**:
+> - $N=8$, peso: el libro imprime $10946$ → correcto **$10496$**
+> - $N=8$, $\alpha$: la tabla teórica imprime $14/14175$ → correcto **$4/14175$**
+> - $N=9$, peso: el libro imprime $5788$ → correcto **$5778$**
+>
+> La tercera es especial: los dos documentos del profesor **se contradicen**.
+> `Integracion.md:282` (tabla) dice $14/14175$, pero `problems.md:186`
+> (listado FORTRAN) dice `DATA .../4,14175/`. El código está bien; la tabla
+> impresa está mal — por eso el programa original del libro funciona.
 >
 > Ver la sección "Erratas verificadas" al final para la demostración.
 
@@ -527,12 +533,34 @@ La tabla 4.2 transcrita del libro tiene **dos pesos mal impresos**.
 
 ## Detección
 
-| $N$ | Peso del libro | $\sum w$ | $\alpha \cdot \sum w$ | ¿$= N$? |
+| $N$ | Valor del libro | $\sum w$ | $\alpha \cdot \sum w$ | ¿$= N$? |
 |:---:|---|---:|---:|:---:|
-| 8 | $10946$ | $29250$ | $8.254$ | ❌ |
-| 8 | $\mathbf{10496}$ | $28350$ | $8.000$ | ✓ |
-| 9 | $5788$ | $89620$ | $9.002$ | ❌ |
-| 9 | $\mathbf{5778}$ | $89600$ | $9.000$ | ✓ |
+| 8 | peso $10946$ | $29250$ | $8.254$ | ❌ |
+| 8 | peso $\mathbf{10496}$ | $28350$ | $8.000$ | ✓ |
+| 8 | $\alpha = 14/14175$ | $28350$ | $28.000$ | ❌ |
+| 8 | $\alpha = \mathbf{4/14175}$ | $28350$ | $8.000$ | ✓ |
+| 9 | peso $5788$ | $89620$ | $9.002$ | ❌ |
+| 9 | peso $\mathbf{5778}$ | $89600$ | $9.000$ | ✓ |
+
+### La errata del $\alpha$ en $N=8$
+
+Esta es distinta a las otras dos: **los dos documentos del profesor se
+contradicen entre sí**.
+
+| Fuente | Dice | ¿Correcto? |
+|---|---|:---:|
+| `Integracion.md:282` (tabla teórica) | $14/14175$ | ❌ |
+| `problems.md:186` (listado FORTRAN) | `DATA (W(I,8),I=9,10)/4,14175/` | ✅ |
+
+Comprobación en el ejemplo 4.4 (longitud de arco, exacto $= 8$):
+
+```
+con  4/14175  ->  L = 8.000000    ✓
+con 14/14175  ->  L = 28.000000   ✗  (factor 3.5 de error)
+```
+
+El código FORTRAN del libro está **bien**; lo que está mal es la tabla
+impresa en el material teórico. Por eso el programa original funciona.
 
 ## Confirmación numérica
 
